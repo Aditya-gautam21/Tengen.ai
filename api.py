@@ -1,9 +1,4 @@
-# api.py
-
-import os
-import time
-import sys
-import subprocess
+import os, time, sys, subprocess
 from fastapi import FastAPI, HTTPException, Body
 from dotenv import load_dotenv
 from rag_pipeline import load_documents, split_text, create_vector_store, create_qa_chain
