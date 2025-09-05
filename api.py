@@ -1,12 +1,12 @@
-from scrapy.utils.reactor import install_reactor  # safe stdlib import
-install_reactor("twisted.internet.asyncioreactor.AsyncioSelectorReactor")
+#from scrapy.utils.reactor import install_reactor  # safe stdlib import
+#install_reactor("twisted.internet.asyncioreactor.AsyncioSelectorReactor")
 
 from fastapi import FastAPI, HTTPException
-from scrapy.crawler import CrawlerRunner
-from scrapy.utils.log import configure_logging
-from scrapy.utils.project import get_project_settings
-from crochet import setup, run_in_reactor
-from scraper.scraper.spiders.research import ResearchSpider
+#from scrapy.crawler import CrawlerRunner
+#from scrapy.utils.log import configure_logging
+#from scrapy.utils.project import get_project_settings
+#from crochet import setup, run_in_reactor
+#from scraper.scraper.spiders.research import ResearchSpider
 import logging, os, json, time
 from rag_pipeline import load_documents, split_text, create_vectorstore, create_qa_chain
 from dotenv import load_dotenv
@@ -16,7 +16,7 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-setup()
+#setup()
 
 app = FastAPI()
 
