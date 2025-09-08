@@ -35,7 +35,7 @@ def create_vectorstore(texts):
     return vectordb
 
 def create_qa_chain():
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro-latest")
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
 
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     vectordb = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
