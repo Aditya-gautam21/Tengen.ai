@@ -1,7 +1,8 @@
 import os, time, sys, subprocess
 from fastapi import FastAPI, HTTPException, Body
 from dotenv import load_dotenv
-from rag_pipeline import load_documents, split_text, create_vector_store, create_qa_chain
+from rag_pipeline import load_documents, split_text, create_vectorstore, create_qa_chain
+from code_assist import generate_code, debug_code
 
 load_dotenv()
 
@@ -26,7 +27,7 @@ async def ask_question(query: str = Body(..., embed=True)):
         texts = split_text(documents)
 
         # 3. Create the vector store
-        create_vector_store(texts)
+        create_vectorstore(texts)
 
         # 4. Create the QA chain
         qa_chain = create_qa_chain()
@@ -38,8 +39,6 @@ async def ask_question(query: str = Body(..., embed=True)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# --- Scraper Endpoint (Updated) ---
 @app.post("/scrape")
 async def scrape(topic: str = Body(..., embed=True)):
     """
@@ -56,8 +55,6 @@ async def scrape(topic: str = Body(..., embed=True)):
     ts = time.strftime("%Y%m%d-%H%M%S")
     out_path = os.path.join(out_dir, f"output_{ts}.json")
 
-    # This is the command to execute: scrapy crawl research -a topic="Your Topic" -o output.json
-    # We run it as a module to ensure we're using the correct Scrapy installation
     command = [
         sys.executable,  # The current python interpreter
         "-m",
@@ -71,16 +68,12 @@ async def scrape(topic: str = Body(..., embed=True)):
     ]
 
     try:
-        # The Scrapy project is in the 'scraper' subdirectory.
-        # We need to run the command from that directory.
         project_dir = os.path.join(os.getcwd(), "scraper")
 
-        # Popen runs the command in a new, non-blocking process
         subprocess.Popen(command, cwd=project_dir)
 
         return {"message": "Scraping process started successfully.", "topic": topic, "output_file": out_path}
     except Exception as e:
-        # This will catch errors if the command itself is invalid, etc.
         raise HTTPException(status_code=500, detail=f"Failed to start scraper: {str(e)}")
 
 
@@ -90,8 +83,20 @@ def about():
         "message": "An AI-powered research and coding assistant that lets you upload PDFs, scrape the web for insights, and generate new ideas. It supports summarization, contextual Q&A, code writing, and debugging—all in one privacy-first tool."
     }
 
-@app.get("/generate-code")
-def generate_code():
+@app.post("/code_assist")
+async def code_assist(prompt: str = Body(...), code:str = Body(None), mode: str = Body("generate")):
+    if mode == "generate":
+        if not prompt:
+            raise HTTPException(status_code=400, detail="Prompt is required for code generation.")
+        response = generate_code(prompt)
+        return {"response": response}
+    elif mode == "debug":
+        if not code:
+            raise HTTPException(status_code=400, detail="Code is required for debugging.")
+        response = debug_code(code)
+        return {"response": response}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid mode. Choose 'generate' or 'debug.'")
 
 
 if __name__ == "__main__":
