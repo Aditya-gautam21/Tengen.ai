@@ -44,5 +44,5 @@ def create_qa_chain():
     qa_chain = RetrievalQA.from_chain_type(llm=llm,
                                            chain_type="stuff",
                                            retriever=retriever,
-                                           return_source_docuents=True)
+                                           return_source_documents=True)
     return qa_chain

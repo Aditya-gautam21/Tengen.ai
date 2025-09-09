@@ -1,33 +1,32 @@
-import { useState, useEffect } from 'react';  // Add useEffect for initial setup
+import { useState, useEffect } from 'react';
 import QueryInput from './components/QueryInput';
 import ResultsDisplay from './components/ResultsDisplay';
-import {scrapeResearch} from './services/api';
+import CodeAssist from './components/CodeAssist'; // Import the new component
+import { scrapeResearch } from './services/api';
 
 function App() {
   const [results, setResults] = useState<string[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState(true);  // Default to true for dark mode
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Toggle dark class on <html> element
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [isDarkMode]);  // Runs when isDarkMode changes
+  }, [isDarkMode]);
 
   const handleSubmit = async (topic: string) => {
-  try {
-    const data = await scrapeResearch(topic);
-    setResults(data.map((item: { content: any; }) => item.content));  // Display scraped content
-  } catch (error) {
-    setResults(['Error during scraping']);
-  }
-};
-
+    try {
+      const data = await scrapeResearch(topic);
+      setResults(data.map((item: { content: any }) => item.content));
+    } catch (error) {
+      setResults(['Error during scraping']);
+    }
+  };
 
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);  // Flip the state
+    setIsDarkMode(!isDarkMode);
   };
 
   return (
@@ -35,6 +34,7 @@ function App() {
       <h1 className="text-3xl font-bold mb-6 text-blue-800 dark:text-blue-300">Tengen.ai Research Assistant</h1>
       <QueryInput onSubmit={handleSubmit} />
       <ResultsDisplay results={results} />
+      <CodeAssist /> {/* Add the new component here */}
       <button
         onClick={toggleDarkMode}
         className="mt-4 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition"
