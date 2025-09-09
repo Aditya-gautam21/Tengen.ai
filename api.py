@@ -1,6 +1,8 @@
 import os, time, sys, subprocess
 from fastapi import FastAPI, HTTPException, Body
+from fastapi.middleware.cors import CORSMiddleware  # Import CORS Middleware
 from dotenv import load_dotenv
+import json
 from rag_pipeline import load_documents, split_text, create_vectorstore, create_qa_chain
 from code_assist import generate_code, debug_code
 
@@ -8,8 +10,16 @@ load_dotenv()
 
 app = FastAPI()
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
-# --- RAG Endpoint (no changes needed here) ---
+
 @app.post("/ask")
 async def ask_question(query: str = Body(..., embed=True)):
     """
@@ -17,46 +27,36 @@ async def ask_question(query: str = Body(..., embed=True)):
     and returns the answer.
     """
     try:
-        # 1. Load the data from the 'data' directory
         documents = load_documents()
         if not documents:
             raise HTTPException(status_code=404,
                                 detail="No data found. Please scrape a topic first using the /scrape endpoint.")
-
-        # 2. Split the text
         texts = split_text(documents)
-
-        # 3. Create the vector store
         create_vectorstore(texts)
-
-        # 4. Create the QA chain
         qa_chain = create_qa_chain()
-
-        # 5. Get the answer
         result = qa_chain({"query": query})
-
         return {"answer": result["result"], "source_documents": result["source_documents"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/scrape")
 async def scrape(topic: str = Body(..., embed=True)):
     """
-    Starts a background Scrapy process to scrape a topic from Wikipedia.
+    Starts a Scrapy process to scrape a topic from Wikipedia, waits for it to complete,
+    and returns the scraped data.
     """
     if not topic:
         raise HTTPException(status_code=400, detail="Topic is required.")
 
-    # Define the output directory and create it if it doesn't exist
     out_dir = os.path.join(os.getcwd(), "data")
     os.makedirs(out_dir, exist_ok=True)
 
-    # Create a unique filename for the scraped data
     ts = time.strftime("%Y%m%d-%H%M%S")
     out_path = os.path.join(out_dir, f"output_{ts}.json")
 
     command = [
-        sys.executable,  # The current python interpreter
+        sys.executable,
         "-m",
         "scrapy",
         "crawl",
@@ -70,21 +70,29 @@ async def scrape(topic: str = Body(..., embed=True)):
     try:
         project_dir = os.path.join(os.getcwd(), "scraper")
 
-        subprocess.Popen(command, cwd=project_dir)
+        result = subprocess.run(command, cwd=project_dir, check=True, capture_output=True, text=True)
 
-        return {"message": "Scraping process started successfully.", "topic": topic, "output_file": out_path}
+        if not os.path.exists(out_path):
+            raise HTTPException(status_code=500, detail=f"Scraper failed to create output file. Error: {result.stderr}")
+
+        with open(out_path, 'r', encoding='utf-8') as f:
+            scraped_data = json.load(f)
+
+        return scraped_data
+
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Scraper process failed: {e.stderr}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start scraper: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start or process scraper: {str(e)}")
 
 
-@app.get("/about")
-def about():
-    return {
-        "message": "An AI-powered research and coding assistant that lets you upload PDFs, scrape the web for insights, and generate new ideas. It supports summarization, contextual Q&A, code writing, and debugging—all in one privacy-first tool."
-    }
-
-@app.post("/code_assist")
-async def code_assist(prompt: str = Body(...), code:str = Body(None), mode: str = Body("generate")):
+@app.post("/code-assist")
+async def code_assist_endpoint(prompt: str = Body(...), code: str = Body(None), mode: str = Body("generate")):
+    """
+    Provides code generation and debugging assistance.
+    - mode='generate': Generates code based on the prompt.
+    - mode='debug': Debugs the provided code.
+    """
     if mode == "generate":
         if not prompt:
             raise HTTPException(status_code=400, detail="Prompt is required for code generation.")
@@ -96,7 +104,14 @@ async def code_assist(prompt: str = Body(...), code:str = Body(None), mode: str 
         response = debug_code(code)
         return {"response": response}
     else:
-        raise HTTPException(status_code=400, detail="Invalid mode. Choose 'generate' or 'debug.'")
+        raise HTTPException(status_code=400, detail="Invalid mode. Choose 'generate' or 'debug'.")
+
+
+@app.get("/about")
+def about():
+    return {
+        "message": "An AI-powered research and coding assistant that lets you upload PDFs, scrape the web for insights, and generate new ideas. It supports summarization, contextual Q&A, code writing, and debugging—all in one privacy-first tool."
+    }
 
 
 if __name__ == "__main__":
