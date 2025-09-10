@@ -3,6 +3,7 @@ import QueryInput from './components/QueryInput';
 import ResultsDisplay from './components/ResultsDisplay';
 import CodeAssist from './components/CodeAssist'; // Import the new component
 import { scrapeResearch } from './services/api';
+import ChatWidget from "./components/ChatWidget";
 
 function App() {
   const [results, setResults] = useState<string[]>([]);

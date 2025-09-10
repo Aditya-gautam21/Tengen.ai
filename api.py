@@ -19,6 +19,11 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+@app.get("/about")
+def about():
+    return {
+        "message": "An AI-powered research and coding assistant that lets you upload PDFs, scrape the web for insights, and generate new ideas. It supports summarization, contextual Q&A, code writing, and debugging—all in one privacy-first tool."
+    }
 
 @app.post("/ask")
 async def ask_question(query: str = Body(..., embed=True)):
@@ -106,12 +111,56 @@ async def code_assist_endpoint(prompt: str = Body(...), code: str = Body(None), 
     else:
         raise HTTPException(status_code=400, detail="Invalid mode. Choose 'generate' or 'debug'.")
 
+@app.post("/chat")
+async def chat(payload: dict):
+    """
+    Unified chat endpoint.
+    Decides between research Q&A, scraping, and code assistance.
+    """
+    try:
+        user_message = payload.get("message", "").lower()
+        if not user_message:
+            raise HTTPException(status_code=400, detail="Message is required.")
 
-@app.get("/about")
-def about():
-    return {
-        "message": "An AI-powered research and coding assistant that lets you upload PDFs, scrape the web for insights, and generate new ideas. It supports summarization, contextual Q&A, code writing, and debugging—all in one privacy-first tool."
-    }
+        # 🔹 Handle code generation / debugging
+        if "debug" in user_message:
+            code = payload.get("code", "")
+            if not code:
+                raise HTTPException(status_code=400, detail="Code is required for debugging.")
+            response = debug_code(code)
+            return {"response": response}
+
+        elif "code" in user_message or "generate" in user_message:
+            response = generate_code(user_message)
+            return {"response": response}
+
+        # 🔹 Handle scraping explicitly
+        elif "scrape" in user_message or "research" in user_message:
+            topic = user_message.replace("scrape", "").replace("research", "").strip()
+            if not topic:
+                raise HTTPException(status_code=400, detail="Please specify a topic to scrape.")
+            scraped_data = await scrape(topic)
+            return {"response": f"Here’s what I found on {topic}:", "data": scraped_data}
+
+        # 🔹 Otherwise use RAG pipeline for Q&A
+        else:
+            documents = load_documents()
+            if not documents:
+                return {"response": "No data found. Please scrape a topic first using the /scrape endpoint."}
+
+            texts = split_text(documents)
+            create_vectorstore(texts)
+            qa_chain = create_qa_chain()
+            result = qa_chain({"query": user_message})
+            return {
+                "response": result["result"],
+                "source_documents": result["source_documents"],
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 if __name__ == "__main__":
