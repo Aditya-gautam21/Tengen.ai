@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
-import QueryInput from './components/QueryInput';
-import ResultsDisplay from './components/ResultsDisplay';
-import { scrapeResearch } from './services/api';
-import ChatWidget from "./components/ChatWidget.tsx";
+import { Chat } from './components/Chat';
 
 function App() {
-  const [results, setResults] = useState<string[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
@@ -15,15 +11,6 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
-
-  const handleSubmit = async (topic: string) => {
-    try {
-      const data = await scrapeResearch(topic);
-      setResults(data.map((item: { content: any }) => item.content));
-    } catch (error) {
-      setResults(['Error during scraping']);
-    }
-  };
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
@@ -35,9 +22,7 @@ function App() {
         Tengen.ai Research Assistant
       </h1>
 
-      {/* Old input/output UI (optional – can be removed if you want only chatbot) */}
-      <QueryInput onSubmit={handleSubmit} />
-      <ResultsDisplay results={results} />
+      <Chat />
 
       <button
         onClick={toggleDarkMode}
@@ -45,8 +30,6 @@ function App() {
       >
         {isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
       </button>
-
-      <ChatWidget />
     </div>
   );
 }
