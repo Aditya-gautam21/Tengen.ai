@@ -1,99 +1,184 @@
-# Tengen.ai
+# Tengen.ai 🔬
 
-**Tengen.ai** is an intelligent **Research Assistant** that automates the discovery of relevant online sources and assists with writing or debugging code related to your topic. Built with a modern full-stack setup, it offers fast, dynamic, and interactive functionality through:
+**Tengen.ai** is an intelligent **AI Research Assistant** that automates web research, generates code, and provides comprehensive analysis on any topic. Built with a modern full-stack architecture featuring:
 
-- **Python** for backend scraping and logic
-- **React + TypeScript** for the frontend interface
-- **CSS** for styling and layout orchestration
+- **FastAPI Backend** with AI-powered research and code generation
+- **Next.js Frontend** with TypeScript and modern UI components  
+- **RAG Pipeline** for intelligent document processing and retrieval
+- **Web Scraping** capabilities for real-time research
 
 ---
 
 ## 🚀 Features
 
-- **Web Research Automation**  
-  - Scrapes topically relevant sources across the web and presents them concisely.
+### 🔍 **Intelligent Web Research**
+- Automated web scraping for any research topic
+- AI-powered content analysis and summarization
+- Source verification and relevance scoring
 
-- **Code Generation & Debugging**  
-  - Automatically generates code snippets or helps debug existing code related to your queried topic.
+### 💻 **Code Generation & Debugging**
+- Generate code snippets in multiple languages
+- Debug and optimize existing code
+- Best practices recommendations
 
-- **Full‑Stack Architecture**  
-  - **Backend**: Python (e.g., FastAPI) handling scraping and AI logic  
-  - **Frontend**: React with TypeScript, styled using CSS for a smooth user experience
+### 🧠 **RAG-Powered Knowledge Base**
+- Upload and process research documents
+- Intelligent question-answering system
+- Context-aware responses using vector embeddings
 
-- **Interactive & Modular**  
-  - Component-based structure for scalability and maintainability.
+### 🎨 **Modern UI/UX**
+- Clean, responsive interface
+- Real-time streaming responses
+- Interactive research panels
 
 ---
 
-## 📦 Requirements
+## 📦 System Requirements
 
-- **Node.js** (16+)  
-- **Python** (3.9+)  
-- `pip` for backend dependencies
+- **Python 3.9+** with pip
+- **Node.js 18+** with npm
+- **Google Gemini API Key** (for AI functionality)
 
 ---
 
-## ⚙️ Installation
+## 🚀 Quick Start
 
-### 1. Clone the Repository
+### Option 1: One-Command Setup (Recommended)
+```bash
+git clone https://github.com/Aditya-gautam21/Tengen.ai.git
+cd Tengen.ai
+python start_tengen.py
+```
+
+### Option 2: Manual Setup
+
+#### 1. Clone Repository
 ```bash
 git clone https://github.com/Aditya-gautam21/Tengen.ai.git
 cd Tengen.ai
 ```
 
-### 2. Setup Backend (Python)
+#### 2. Configure Environment
 ```bash
-cd backend
+# Edit backend/.env and add your Google API key
+echo "GOOGLE_API_KEY=your_actual_api_key_here" > backend/.env
+```
+
+#### 3. Install Dependencies
+```bash
+# Python dependencies
 pip install -r requirements.txt
-# Example command if using FastAPI:
-uvicorn main:app --reload
+
+# Node.js dependencies  
+cd frontend && npm install && cd ..
 ```
 
-### 3. Setup Frontend (React + TypeScript)
+#### 4. Start Servers
 ```bash
-cd frontend
-npm install
-npm start
+# Terminal 1: Backend
+python start_backend.py
+
+# Terminal 2: Frontend  
+node start_frontend.js
 ```
 
 ---
 
-## ▶️ Usage Instructions
+## 🔑 API Key Setup
 
-1. Launch the **backend server** to enable scraping and code logic.  
-2. Start the **frontend React app** in development mode.  
-3. Input a topic into the interface:  
-   - The assistant fetches relevant online sources.  
-   - It then generates or debugs code snippets based on your need.
+1. Get your Google Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Edit `backend/.env`:
+   ```
+   GOOGLE_API_KEY=your_actual_api_key_here
+   ```
 
 ---
 
-## 📂 Project Structure
+## 🌐 Access Points
+
+Once running, access the application at:
+
+- **Frontend UI**: http://localhost:3000
+- **Backend API**: http://localhost:8000  
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+---
+
+## 📖 Usage Guide
+
+### 🔍 Research Topics
+1. Enter any research topic in the search field
+2. Click "Research" to start web scraping
+3. View summarized results with source links
+4. Ask follow-up questions about the research
+
+### 💻 Code Assistance  
+1. Use the `/code-assist` endpoint for code generation
+2. Use the `/code/debug` endpoint for debugging
+3. Specify programming language for better results
+
+### 📄 Document Upload
+1. Upload JSON research files via `/files/upload`
+2. Documents are automatically processed for Q&A
+3. Query your uploaded documents through the chat interface
+
+---
+
+## 🏗️ Architecture
 
 ```
 Tengen.ai/
-├── backend/                # Python services
-│   ├── main.py             # Backend entrypoint
-│   ├── scraper/            # Web scraping logic
-│   ├── code_assist/        # Code generation/debugging logic
-│   └── requirements.txt    # Python dependencies
+├── backend/                    # FastAPI Backend
+│   ├── api.py                 # Main API endpoints
+│   ├── app.py                 # Server startup
+│   ├── code_assist.py         # Code generation logic
+│   ├── rag_pipeline.py        # RAG implementation
+│   ├── web_scraper.py         # Web scraping engine
+│   ├── data/                  # Research documents
+│   └── db/                    # Vector database
 │
-├── frontend/               # React + TypeScript UI
-│   ├── src/
-│   │   ├── components/     # Modular UI components
-│   │   ├── pages/          # Main screens/pages
-│   │   └── styles/         # CSS styling
-│   └── package.json        # Frontend dependencies
+├── frontend/                   # Next.js Frontend
+│   ├── app/                   # Next.js app directory
+│   ├── components/            # React components
+│   ├── lib/                   # Utilities and API client
+│   └── package.json           # Dependencies
 │
-└── README.md               # Project README
+├── start_tengen.py            # Complete startup script
+├── start_backend.py           # Backend-only startup
+├── start_frontend.js          # Frontend-only startup
+└── requirements.txt           # Python dependencies
 ```
 
 ---
 
-## 🌐 Configuration & Deployment
+## 🔧 API Endpoints
 
-- Configure scraping logic and source filters in `scraper/config.py` (or similar).  
-- Deploy backend on platforms like **Heroku**, **Render**, or **Docker**.  
+### Research & Chat
+- `POST /chat` - Main chat interface
+- `POST /research` - Research any topic
+- `GET /health` - System health check
+
+### Code Assistance
+- `POST /code-assist` - Streaming code assistance
+- `POST /code/generate` - Generate code snippets
+- `POST /code/debug` - Debug code issues
+
+### File Management
+- `POST /files/upload` - Upload research documents
+
+---
+
+## 🚀 Deployment
+
+### Local Development
+```bash
+python start_tengen.py
+```
+
+### Production Deployment
+1. **Backend**: Deploy FastAPI app to Heroku, Railway, or similar
+2. **Frontend**: Deploy Next.js app to Vercel, Netlify, or similar
+3. **Environment**: Set production API URLs and keys
 - Host frontend on **Vercel**, **Netlify**, or any static hosting service.
 
 ---
