@@ -1,0 +1,18 @@
+{
+  "name": "tengen-backend",
+  "version": "0.1.0",
+  "description": "Tengen.ai Backend - Python FastAPI server",
+  "scripts": {
+    "start": "python backend/app.py",
+    "dev": "python start_backend.py",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "fastapi",
+    "langchain",
+    "ai",
+    "research"
+  ],
+  "author": "",
+  "license": "MIT"
+}

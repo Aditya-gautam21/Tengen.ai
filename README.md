@@ -43,43 +43,31 @@
 
 ## 🚀 Quick Start
 
-### Option 1: One-Command Setup (Recommended)
+### Option 1: First-Time Setup (Run Once)
 ```bash
 git clone https://github.com/Aditya-gautam21/Tengen.ai.git
 cd Tengen.ai
-python start_tengen.py
+python setup_first_time.py  # Install everything once
+# Edit backend/.env with your Google API key
+python start_tengen.py      # Fast startup from now on
 ```
 
-### Option 2: Manual Setup
-
-#### 1. Clone Repository
+### Option 2: Quick Start (After First Setup)
 ```bash
-git clone https://github.com/Aditya-gautam21/Tengen.ai.git
-cd Tengen.ai
+# After running setup_first_time.py once:
+python start_tengen.py  # Fast startup, no dependency installation
 ```
 
-#### 2. Configure Environment
+### Option 3: Manual Setup
 ```bash
-# Edit backend/.env and add your Google API key
+# 1. Install dependencies
+python install_dependencies.py
+
+# 2. Configure API key
 echo "GOOGLE_API_KEY=your_actual_api_key_here" > backend/.env
-```
 
-#### 3. Install Dependencies
-```bash
-# Python dependencies
-pip install -r requirements.txt
-
-# Node.js dependencies  
-cd frontend && npm install && cd ..
-```
-
-#### 4. Start Servers
-```bash
-# Terminal 1: Backend
-python start_backend.py
-
-# Terminal 2: Frontend  
-node start_frontend.js
+# 3. Start application
+python start_tengen.py
 ```
 
 ---
@@ -216,3 +204,46 @@ This project is open-source under the **MIT License**.
 ## ⭐ About
 
 Tengen.ai is a full‑stack research assistant that combines **web scraping** and **AI-powered code assistance** to support developers, researchers, and learners with both quick information retrieval and code-based solutions—all wrapped up in a modern React + Python interface.
+
+---
+
+## 🔧 Troubleshooting
+
+### Installation Issues
+
+If dependencies fail to install:
+
+1. **Use robust installer**: `python install_dependencies.py`
+2. **Try minimal install**: `pip install -r requirements-minimal.txt`  
+3. **Check Python version**: Must be 3.9+
+4. **Check Node.js version**: Must be 18+
+
+### Common Fixes
+
+- **API Key Error**: Edit `backend/.env` with your Google Gemini API key
+- **Port 8000 in use**: Kill existing process or change port in `backend/app.py`
+- **Module not found**: Run `pip install -r requirements.txt`
+- **npm install fails**: Run `cd frontend && npm cache clean --force && npm install`
+
+### Detailed Help
+
+For comprehensive troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+### Quick Test
+
+```bash
+# Test your setup
+python test_setup.py
+
+# Test API (after starting backend)
+python test_api.py
+```
+
+---
+
+## 📞 Support
+
+- 📖 **Setup Guide**: [SETUP_GUIDE.md](SETUP_GUIDE.md)
+- 🔧 **Troubleshooting**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- 🧪 **Testing**: `python test_setup.py`
+- 🚀 **Quick Install**: `python install_dependencies.py`

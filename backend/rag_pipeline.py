@@ -3,8 +3,11 @@ import json
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+except ImportError:
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -82,12 +85,11 @@ def create_vectorstore(texts):
         if not os.path.exists(DB_PATH):
             os.makedirs(DB_PATH)
 
-        vectordb = Chroma.from_documents(
+        vectordb = FAISS.from_documents(
             documents=texts, 
-            embedding=embeddings, 
-            persist_directory=DB_PATH
+            embedding=embeddings
         )
-        vectordb.persist()
+        vectordb.save_local(DB_PATH)
         print(f"Vector store created with {len(texts)} documents")
         return vectordb
     except Exception as e:
@@ -102,7 +104,7 @@ def create_qa_chain():
             raise ValueError("GOOGLE_API_KEY not found in environment variables")
             
         llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-pro",
+            model="gemini-2.5-pro",
             google_api_key=api_key,
             temperature=0.3
         )
@@ -116,9 +118,10 @@ def create_qa_chain():
             print("Vector database not found. Please upload documents first.")
             return None
             
-        vectordb = Chroma(
-            persist_directory=DB_PATH, 
-            embedding_function=embeddings
+        vectordb = FAISS.load_local(
+            DB_PATH, 
+            embeddings,
+            allow_dangerous_deserialization=True
         )
         retriever = vectordb.as_retriever(
             search_kwargs={"k": 5}  # Return top 5 relevant documents
