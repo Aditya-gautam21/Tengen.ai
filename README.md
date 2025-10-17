@@ -46,31 +46,48 @@
 
 ## 🚀 Quick Start
 
-### Option 1: First-Time Setup (Run Once)
+### Production Setup
 ```bash
-git clone https://github.com/Aditya-gautam21/Tengen.ai.git
+git clone https://github.com/your-org/Tengen.ai.git
 cd Tengen.ai
-python setup_first_time.py  # Install everything once
-# Edit backend/.env with your Google API key
-python start_tengen.py      # Fast startup from now on
-```
 
-### Option 2: Quick Start (After First Setup)
-```bash
-# After running setup_first_time.py once:
-python start_tengen.py  # Fast startup, no dependency installation
-```
+# 1. Setup environment
+python setup.py
 
-### Option 3: Manual Setup
-```bash
-# 1. Install dependencies
-python install_dependencies.py
-
-# 2. Configure API key
-echo "GOOGLE_API_KEY=your_actual_api_key_here" > backend/.env
+# 2. Configure environment variables
+cp .env.production backend/.env
+# Edit backend/.env with your actual values
 
 # 3. Start application
-python start_tengen.py
+python start.py
+```
+
+### Docker Deployment (Recommended)
+```bash
+# 1. Configure environment
+cp .env.production .env
+# Edit .env with your actual values
+
+# 2. Build and run
+docker-compose up --build -d
+
+# 3. Check health
+curl http://localhost:8080/api/v1/health
+```
+
+### Development Setup
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+cd frontend && npm install
+
+# 2. Configure development environment
+echo "GOOGLE_API_KEY=your_api_key" > backend/.env
+echo "NEXT_PUBLIC_API_URL=http://localhost:8080" > frontend/.env.local
+
+# 3. Start services
+python backend/main.py &
+cd frontend && npm run dev
 ```
 
 ---
@@ -348,43 +365,57 @@ Tengen.ai is a full‑stack research assistant that combines **web scraping** an
 
 ---
 
-## 🔧 Troubleshooting
+## 🔧 Production Deployment
 
-### Installation Issues
+### AWS ECS Deployment
+```bash
+# Deploy infrastructure
+aws cloudformation create-stack \
+  --stack-name tengen-production \
+  --template-body file://aws/cloudformation-template.yaml \
+  --parameters ParameterKey=DomainName,ParameterValue=yourdomain.com \
+  --capabilities CAPABILITY_IAM
 
-If dependencies fail to install:
+# Build and push Docker image
+docker build -t tengen-ai .
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account>.dkr.ecr.us-east-1.amazonaws.com
+docker tag tengen-ai:latest <account>.dkr.ecr.us-east-1.amazonaws.com/tengen-ai:latest
+docker push <account>.dkr.ecr.us-east-1.amazonaws.com/tengen-ai:latest
+```
 
-1. **Use robust installer**: `python install_dependencies.py`
-2. **Try minimal install**: `pip install -r requirements-minimal.txt`  
-3. **Check Python version**: Must be 3.9+
-4. **Check Node.js version**: Must be 18+
+### Security Configuration
 
-### Common Fixes
+1. **Environment Variables**: Never commit secrets to version control
+2. **HTTPS Only**: All production traffic must use HTTPS
+3. **Rate Limiting**: Configure appropriate rate limits for your use case
+4. **File Uploads**: Only allow specific file types and sizes
+5. **CORS**: Configure allowed origins for your domain
 
-- **API Key Error**: Edit `backend/.env` with your Google Gemini API key
-- **Port 8000 in use**: Kill existing process or change port in `backend/app.py`
-- **Module not found**: Run `pip install -r requirements.txt`
-- **npm install fails**: Run `cd frontend && npm cache clean --force && npm install`
-
-### Detailed Help
-
-For comprehensive troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-
-### Quick Test
+### Monitoring
 
 ```bash
-# Test your setup
-python test_setup.py
+# Health check
+curl https://your-domain.com/api/v1/health/detailed
 
-# Test API (after starting backend)
-python test_api.py
+# Metrics endpoint
+curl https://your-domain.com/metrics
+
+# View logs
+docker-compose logs -f tengen-api
 ```
+
+### Troubleshooting
+
+- **Container won't start**: Check environment variables and logs
+- **Health check fails**: Verify API key configuration
+- **Permission denied**: Ensure proper file permissions for volumes
+- **High memory usage**: Monitor and adjust container limits
 
 ---
 
 ## 📞 Support
 
-- 📖 **Setup Guide**: [SETUP_GUIDE.md](SETUP_GUIDE.md)
-- 🔧 **Troubleshooting**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- 🧪 **Testing**: `python test_setup.py`
-- 🚀 **Quick Install**: `python install_dependencies.py`
+- 📖 **Documentation**: [docs/](docs/)
+- 🔧 **Deployment Guide**: [docs/deployment.md](docs/deployment.md)
+- 🛡️ **Security**: Report security issues to security@yourdomain.com
+- 📊 **Monitoring**: [monitoring/README.md](monitoring/README.md)

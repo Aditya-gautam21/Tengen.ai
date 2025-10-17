@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   tengen-api:
-    build: .
+    build: 
+      context: .
+      target: production
     container_name: tengen-api
     ports:
       - "8080:8080"
@@ -11,31 +13,47 @@ services:
       - PORT=8080
       - LOG_LEVEL=INFO
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
     volumes:
-      - ./logs:/app/logs
-      - ./data:/app/data
-      - ./db:/app/db
+      - tengen_data:/app/data
+      - tengen_logs:/app/logs
+      - tengen_tmp:/tmp/tengen
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    user: "1000:1000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
     networks:
       - tengen-network
+    depends_on:
+      - redis
 
-  # Optional: Redis for caching (uncomment if needed)
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: tengen-redis
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #   restart: unless-stopped
-  #   networks:
-  #     - tengen-network
+  redis:
+    image: redis:7-alpine
+    container_name: tengen-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - tengen-network
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-tengen_redis_pass}
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=50m
 
   # Optional: Nginx reverse proxy (uncomment if needed)
   # nginx:
@@ -56,7 +74,16 @@ services:
 networks:
   tengen-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
-  # redis_data:
-  #   driver: local
+  tengen_data:
+    driver: local
+  tengen_logs:
+    driver: local
+  tengen_tmp:
+    driver: local
+  redis_data:
+    driver: local

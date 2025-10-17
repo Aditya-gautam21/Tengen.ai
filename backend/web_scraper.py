@@ -16,14 +16,17 @@ class WebScraper:
         })
 
     def search_google(self, query: str, num_results: int = 10) -> List[str]:
-        """Search Google and return URLs (simplified version)"""
-        # Note: In production, you'd want to use Google Custom Search API
-        # This is a simplified version for demonstration
+        """Search and return safe URLs"""
+        # Sanitize query to prevent injection
+        safe_query = re.sub(r'[^a-zA-Z0-9\s_-]', '', query.strip())
+        if not safe_query:
+            return []
+        
+        # Use safe, predefined URLs only
         search_urls = [
-            f"https://en.wikipedia.org/wiki/{query.replace(' ', '_')}",
-            f"https://www.reddit.com/search/?q={query.replace(' ', '%20')}",
+            f"https://en.wikipedia.org/wiki/{safe_query.replace(' ', '_')}",
         ]
-        return search_urls[:num_results]
+        return search_urls[:min(num_results, 5)]
 
     def scrape_url(self, url: str) -> Dict[str, Any]:
         """Scrape content from a single URL"""
@@ -108,16 +111,25 @@ class WebScraper:
         return results
 
     def save_results(self, results: List[Dict[str, Any]], topic: str) -> str:
-        """Save scraping results to JSON file"""
-        os.makedirs("data", exist_ok=True)
+        """Save scraping results to JSON file securely"""
+        from pathlib import Path
         
-        filename = f"data/{topic.replace(' ', '_').lower()}_research.json"
+        data_dir = Path("data")
+        data_dir.mkdir(exist_ok=True)
+        
+        # Sanitize filename
+        safe_topic = re.sub(r'[^a-zA-Z0-9_-]', '_', topic.lower())
+        filename = data_dir / f"{safe_topic}_research.json"
+        
+        # Ensure file is within data directory
+        if not str(filename.resolve()).startswith(str(data_dir.resolve())):
+            raise ValueError("Invalid file path")
         
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
         
         print(f"Results saved to {filename}")
-        return filename
+        return str(filename)
 
 def scrape_research_topic(topic: str, max_results: int = 5) -> Dict[str, Any]:
     """Main function to scrape research on a topic"""

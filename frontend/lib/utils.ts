@@ -16,6 +16,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const fetcher = async (url: string) => {
+  // Validate URL to prevent SSRF
+  const allowedHosts = ['localhost', '127.0.0.1', process.env.NEXT_PUBLIC_API_HOST];
+  const urlObj = new URL(url, window.location.origin);
+  
+  if (!allowedHosts.some(host => urlObj.hostname === host || urlObj.hostname.endsWith(`.${host}`))) {
+    throw new ChatSDKError('forbidden:api', 'Invalid host');
+  }
+
   const response = await fetch(url);
 
   if (!response.ok) {
@@ -31,6 +39,15 @@ export async function fetchWithErrorHandlers(
   init?: RequestInit,
 ) {
   try {
+    // Validate URL for SSRF protection
+    const url = typeof input === 'string' ? input : input.toString();
+    const allowedHosts = ['localhost', '127.0.0.1', process.env.NEXT_PUBLIC_API_HOST];
+    const urlObj = new URL(url, window.location.origin);
+    
+    if (!allowedHosts.some(host => urlObj.hostname === host || urlObj.hostname.endsWith(`.${host}`))) {
+      throw new ChatSDKError('forbidden:api', 'Invalid host');
+    }
+
     const response = await fetch(input, init);
 
     if (!response.ok) {
@@ -94,7 +111,15 @@ export function getTrailingMessageId({
 }
 
 export function sanitizeText(text: string) {
-  return text.replace('<has_function_call>', '');
+  // Comprehensive XSS protection
+  return text
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+    .replace(/<object[^>]*>.*?<\/object>/gi, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .replace('<has_function_call>', '');
 }
 
 export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {

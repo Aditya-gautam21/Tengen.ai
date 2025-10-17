@@ -1,67 +1,75 @@
-# Multi-stage Docker build for Tengen.ai
-FROM python:3.10-slim as builder
+# Secure multi-stage Docker build for Tengen.ai
+FROM python:3.11-slim as builder
 
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     make \
     libffi-dev \
     libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Copy requirements and install Python dependencies
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy and install requirements
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Production stage
-FROM python:3.10-slim
+FROM python:3.11-slim as production
+
+# Create non-root user with specific UID/GID
+RUN groupadd -r -g 1000 tengen && useradd -r -g tengen -u 1000 tengen
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Set working directory
 WORKDIR /app
 
-# Create non-root user for security
-RUN groupadd -r tengen && useradd -r -g tengen tengen
+# Copy application code with proper ownership
+COPY --chown=tengen:tengen backend/ ./backend/
+COPY --chown=tengen:tengen requirements.txt .
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy Python packages from builder stage
-COPY --from=builder /root/.local /home/tengen/.local
-
-# Copy application code
-COPY backend/ ./backend/
-COPY data/ ./data/ 2>/dev/null || true
-COPY db/ ./db/ 2>/dev/null || true
-
-# Create necessary directories
-RUN mkdir -p logs && \
-    chown -R tengen:tengen /app
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/data /app/logs /tmp/tengen && \
+    chown -R tengen:tengen /app /tmp/tengen && \
+    chmod 755 /app/data /app/logs
 
 # Switch to non-root user
 USER tengen
 
-# Add local Python packages to PATH
-ENV PATH=/home/tengen/.local/bin:$PATH
-ENV PYTHONPATH=/app
+# Security: Set read-only filesystem (except for specific directories)
+VOLUME ["/app/data", "/app/logs", "/tmp/tengen"]
+
+# Environment variables
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HOST=0.0.0.0 \
+    PORT=8080 \
+    LOG_LEVEL=INFO \
+    TMPDIR=/tmp/tengen
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/api/v1/health/live || exit 1
 
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/api/v1/health/live || exit 1
-
-# Default environment variables
-ENV HOST=0.0.0.0
-ENV PORT=8080
-ENV PYTHONUNBUFFERED=1
-ENV LOG_LEVEL=INFO
-
 # Run the application
-CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
+CMD ["python", "backend/main.py"]

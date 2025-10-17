@@ -7,10 +7,10 @@ Parameters:
     Default: production
     AllowedValues: [development, staging, production]
   
-  GoogleAPIKey:
+  DomainName:
     Type: String
-    NoEcho: true
-    Description: Google API Key for AI services
+    Description: Domain name for the application
+    Default: tengen.ai
 
 Resources:
   # VPC and Networking
@@ -30,7 +30,7 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [0, !GetAZs '']
       CidrBlock: 10.0.1.0/24
-      MapPublicIpOnLaunch: true
+      MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
           Value: tengen-public-subnet-1
@@ -41,10 +41,31 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [1, !GetAZs '']
       CidrBlock: 10.0.2.0/24
-      MapPublicIpOnLaunch: true
+      MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
           Value: tengen-public-subnet-2
+
+  # Private subnets for ECS tasks
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.3.0/24
+      Tags:
+        - Key: Name
+          Value: tengen-private-subnet-1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.0.4.0/24
+      Tags:
+        - Key: Name
+          Value: tengen-private-subnet-2
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -96,13 +117,16 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
           CidrIp: 0.0.0.0/0
+          Description: HTTPS traffic from internet
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          DestinationSecurityGroupId: !Ref ECSSecurityGroup
+          Description: Traffic to ECS tasks
 
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -144,15 +168,43 @@ Resources:
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 3
 
-  ALBListener:
+  # SSL Certificate
+  SSLCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub '${Environment}.tengen.ai'
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub '${Environment}.tengen.ai'
+          HostedZoneId: !Ref HostedZone
+
+  # HTTP to HTTPS Redirect
+  ALBListenerHTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  # HTTPS Listener
+  ALBListenerHTTPS:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
       LoadBalancerArn: !Ref ApplicationLoadBalancer
-      Port: 80
-      Protocol: HTTP
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref SSLCertificate
+      SslPolicy: ELBSecurityPolicy-TLS-1-2-2017-01
 
   # ECS Cluster
   ECSCluster:
@@ -184,6 +236,8 @@ Resources:
             - ContainerPort: 8080
               Protocol: tcp
           Essential: true
+          User: '1000:1000'
+          ReadonlyRootFilesystem: true
           Environment:
             - Name: HOST
               Value: 0.0.0.0
@@ -191,6 +245,9 @@ Resources:
               Value: '8080'
             - Name: LOG_LEVEL
               Value: INFO
+          Secrets:
+            - Name: GOOGLE_API_KEY
+              ValueFrom: !Ref GoogleAPIKeySecret
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -220,11 +277,11 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           Subnets:
-            - !Ref PublicSubnet1
-            - !Ref PublicSubnet2
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
           SecurityGroups:
             - !Ref ECSSecurityGroup
-          AssignPublicIp: ENABLED
+          AssignPublicIp: DISABLED
       LoadBalancers:
         - ContainerName: tengen-api
           ContainerPort: 8080
@@ -278,12 +335,53 @@ Resources:
                   - cloudwatch:PutMetricData
                 Resource: '*'
 
+  # Secrets Manager for API keys
+  GoogleAPIKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: tengen/google-api-key
+      Description: Google API Key for Tengen.ai
+      SecretString: !Sub |
+        {
+          "api_key": "${GoogleAPIKey}"
+        }
+
+  # Route53 Hosted Zone
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref DomainName
+
   # CloudWatch Log Group
   CloudWatchLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: /ecs/tengen
       RetentionInDays: 30
+      KmsKeyId: !Ref LogsKMSKey
+
+  # KMS Key for encryption
+  LogsKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS Key for CloudWatch Logs encryption
+      KeyPolicy:
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              Service: !Sub 'logs.${AWS::Region}.amazonaws.com'
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: '*'
 
   # Auto Scaling
   AutoScalingTarget:

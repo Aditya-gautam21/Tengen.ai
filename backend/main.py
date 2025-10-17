@@ -51,18 +51,30 @@ app = FastAPI(
 )
 
 # Security middleware
+allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]  # Configure appropriately for production
+    allowed_hosts=[host.strip() for host in allowed_hosts] + ["*"] if os.getenv("ENVIRONMENT") == "development" else [host.strip() for host in allowed_hosts]
 )
 
-# CORS middleware
+# Rate limiting middleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS middleware with security
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=[origin.strip() for origin in allowed_origins],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["X-Request-ID"],
 )
 
 # Custom logging middleware
@@ -74,14 +86,25 @@ app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(logs.router, prefix="/api/v1", tags=["logs"])
 
 @app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
+@limiter.limit("30/minute")
+async def root(request):
+    """Root endpoint with rate limiting"""
+    from utils.security import SecurityHeaders
+    
+    response_data = {
         "message": "Tengen.ai API",
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs"
     }
+    
+    response = JSONResponse(content=response_data)
+    
+    # Add security headers
+    for header, value in SecurityHeaders.get_security_headers().items():
+        response.headers[header] = value
+    
+    return response
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
