@@ -1,0 +1,30 @@
+{
+    "TargetGroups": [
+        {
+            "Name": "tengen-tg",
+            "Protocol": "HTTP",
+            "Port": 8080,
+            "VpcId": "vpc-12345678",
+            "HealthCheckProtocol": "HTTP",
+            "HealthCheckPath": "/api/v1/health/live",
+            "HealthCheckIntervalSeconds": 30,
+            "HealthCheckTimeoutSeconds": 5,
+            "HealthyThresholdCount": 2,
+            "UnhealthyThresholdCount": 3,
+            "Matcher": {
+                "HttpCode": "200"
+            },
+            "TargetType": "ip",
+            "Tags": [
+                {
+                    "Key": "Environment",
+                    "Value": "production"
+                },
+                {
+                    "Key": "Application",
+                    "Value": "tengen-ai"
+                }
+            ]
+        }
+    ]
+}

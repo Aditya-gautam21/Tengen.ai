@@ -1,9 +1,12 @@
 # Tengen.ai 🔬
 
-**Tengen.ai** is an intelligent **AI Research Assistant** that automates web research, generates code, and provides comprehensive analysis on any topic. Built with a modern full-stack architecture featuring:
+**Tengen.ai** is a production-ready **AI Research Assistant** that automates web research, generates code, and provides comprehensive analysis on any topic. Built with enterprise-grade architecture featuring:
 
-- **FastAPI Backend** with AI-powered research and code generation
-- **Next.js Frontend** with TypeScript and modern UI components  
+- **FastAPI Backend** with RESTful APIs and microservices architecture
+- **Containerized Deployment** with Docker and Kubernetes support
+- **CI/CD Pipeline** with GitHub Actions for automated deployment
+- **Cloud-Native** design for AWS, GCP, and Azure deployment
+- **Monitoring & Observability** with comprehensive logging and health checks
 - **RAG Pipeline** for intelligent document processing and retrieval
 - **Web Scraping** capabilities for real-time research
 
@@ -86,10 +89,17 @@ python start_tengen.py
 
 Once running, access the application at:
 
-- **Frontend UI**: http://localhost:3000
-- **Backend API**: http://localhost:8000  
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
+### Local Development
+- **Backend API**: http://localhost:8080  
+- **API Documentation**: http://localhost:8080/docs
+- **Health Check**: http://localhost:8080/api/v1/health
+- **Frontend UI**: http://localhost:3000 (if running frontend)
+
+### Production Endpoints
+- **API Base**: https://your-api-domain.com/api/v1
+- **Interactive Docs**: https://your-api-domain.com/docs
+- **Health Monitoring**: https://your-api-domain.com/api/v1/health/detailed
+- **Streamlit App**: https://tengen-ai.streamlit.app (if using Streamlit Cloud)
 ---
 
 ## 📖 Usage Guide
@@ -116,12 +126,19 @@ Once running, access the application at:
 
 ```
 Tengen.ai/
-├── backend/                    # FastAPI Backend
-│   ├── api.py                 # Main API endpoints
-│   ├── app.py                 # Server startup
+├── backend/                    # Production FastAPI Backend
+│   ├── main.py                # Production application entry point
+│   ├── services/              # Modular service layer
+│   │   ├── inference.py       # AI inference service
+│   │   ├── health.py          # Health monitoring service
+│   │   └── base_service.py    # Base service class
+│   ├── api/                   # API routes
+│   │   └── routes/            # Organized route handlers
+│   ├── utils/                 # Utilities and middleware
+│   │   ├── logger.py          # Production logging
+│   │   └── middleware.py      # Security & monitoring middleware
 │   ├── code_assist.py         # Code generation logic
 │   ├── rag_pipeline.py        # RAG implementation
-│   ├── web_scraper.py         # Web scraping engine
 │   ├── data/                  # Research documents
 │   └── db/                    # Vector database
 │
@@ -131,9 +148,24 @@ Tengen.ai/
 │   ├── lib/                   # Utilities and API client
 │   └── package.json           # Dependencies
 │
-├── start_tengen.py            # Complete startup script
-├── start_backend.py           # Backend-only startup
-├── start_frontend.js          # Frontend-only startup
+├── aws/                       # AWS deployment configurations
+│   ├── cloudformation-template.yaml  # Infrastructure as Code
+│   ├── ecs-task-definition.json      # ECS task configuration
+│   └── ecs-service.json              # ECS service configuration
+│
+├── monitoring/                # Monitoring and observability
+│   ├── uptime_monitor.py      # Uptime monitoring script
+│   └── performance_monitor.py # Performance testing tool
+│
+├── docs/                      # Documentation
+│   └── deployment.md          # Comprehensive deployment guide
+│
+├── .github/workflows/         # CI/CD pipeline
+│   └── deploy.yml             # GitHub Actions workflow
+│
+├── Dockerfile                 # Production container image
+├── docker-compose.yml         # Local development orchestration
+├── streamlit_app.py           # Streamlit Cloud deployment
 └── requirements.txt           # Python dependencies
 ```
 
@@ -141,33 +173,142 @@ Tengen.ai/
 
 ## 🔧 API Endpoints
 
-### Research & Chat
+### AI Inference & Predictions
+- `POST /api/v1/predict` - Main prediction endpoint
+- `POST /api/v1/predict/batch` - Batch prediction processing
+- `GET /api/v1/model/info` - Model information and capabilities
+
+### Code Generation & Debugging
+- `POST /api/v1/code/generate` - Generate code snippets
+- `POST /api/v1/code/debug` - Debug and analyze code
+- `POST /api/v1/research` - Research topics and documents
+
+### Health & Monitoring
+- `GET /api/v1/health` - Basic health check
+- `GET /api/v1/health/detailed` - Comprehensive system health
+- `GET /api/v1/health/live` - Liveness probe (Kubernetes)
+- `GET /api/v1/health/ready` - Readiness probe (Kubernetes)
+
+### Logging & Administration
+- `GET /api/v1/logs` - Retrieve application logs
+- `GET /api/v1/logs/download` - Download log files
+- `DELETE /api/v1/logs` - Clear log files
+
+### Legacy Endpoints (for backward compatibility)
 - `POST /chat` - Main chat interface
-- `POST /research` - Research any topic
-- `GET /health` - System health check
-
-### Code Assistance
 - `POST /code-assist` - Streaming code assistance
-- `POST /code/generate` - Generate code snippets
-- `POST /code/debug` - Debug code issues
-
-### File Management
 - `POST /files/upload` - Upload research documents
 
 ---
 
 ## 🚀 Deployment
 
-### Local Development
+### Quick Start with Docker
+
 ```bash
-python start_tengen.py
+# Clone and setup
+git clone https://github.com/your-org/tengen.ai.git
+cd tengen.ai
+
+# Set environment variables
+echo "GOOGLE_API_KEY=your_actual_api_key_here" > .env
+
+# Run with Docker Compose
+docker-compose up --build
 ```
 
-### Production Deployment
-1. **Backend**: Deploy FastAPI app to Heroku, Railway, or similar
-2. **Frontend**: Deploy Next.js app to Vercel, Netlify, or similar
-3. **Environment**: Set production API URLs and keys
-- Host frontend on **Vercel**, **Netlify**, or any static hosting service.
+### Production Deployment Options
+
+#### 1. AWS ECS with Fargate (Recommended)
+```bash
+# Deploy with CloudFormation
+aws cloudformation create-stack \
+  --stack-name tengen-production \
+  --template-body file://aws/cloudformation-template.yaml \
+  --parameters ParameterKey=GoogleAPIKey,ParameterValue=your_api_key \
+  --capabilities CAPABILITY_IAM
+```
+
+#### 2. Streamlit Cloud (Simple)
+- Connect GitHub repository to Streamlit Cloud
+- Set environment variables in dashboard
+- Deploy automatically on git push
+
+#### 3. Kubernetes
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f k8s/
+```
+
+#### 4. Traditional VPS/Cloud
+```bash
+# Install Docker and run
+docker run -d -p 8080:8080 \
+  -e GOOGLE_API_KEY=your_api_key \
+  tengen-ai:latest
+```
+
+### CI/CD Pipeline
+
+The project includes automated CI/CD with GitHub Actions:
+- ✅ Automated testing and security scanning
+- ✅ Docker image building and pushing
+- ✅ AWS ECS deployment
+- ✅ Streamlit Cloud deployment
+- ✅ Slack notifications
+
+**Setup**: Configure secrets in GitHub repository settings.
+
+---
+
+## 📊 Monitoring & Observability
+
+### Health Monitoring
+- **Uptime Monitoring**: Automated health checks every 60 seconds
+- **Performance Testing**: Comprehensive response time and throughput metrics
+- **System Resources**: CPU, memory, and disk usage monitoring
+- **Error Tracking**: Centralized error logging and alerting
+
+### Logging
+- **Structured Logging**: JSON-formatted logs with rotation
+- **Multiple Log Levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL
+- **Log Aggregation**: Centralized log collection and analysis
+- **Real-time Monitoring**: Live log streaming and analysis
+
+### Monitoring Tools
+```bash
+# Run uptime monitoring
+python monitoring/uptime_monitor.py --api-url https://your-api.com
+
+# Run performance tests
+python monitoring/performance_monitor.py --iterations 20
+
+# Check system health
+curl https://your-api.com/api/v1/health/detailed
+```
+
+---
+
+## 🔒 Production Features
+
+### Security
+- **Non-root Container**: Runs as non-privileged user
+- **Security Headers**: CSRF, XSS, and clickjacking protection
+- **Rate Limiting**: Configurable request rate limits
+- **Input Validation**: Comprehensive request validation
+- **Secrets Management**: Secure environment variable handling
+
+### Scalability
+- **Horizontal Scaling**: Multiple container instances
+- **Load Balancing**: Automatic request distribution
+- **Auto Scaling**: CPU and memory-based scaling policies
+- **Stateless Design**: No session dependencies
+
+### Reliability
+- **Health Checks**: Kubernetes-ready liveness and readiness probes
+- **Graceful Shutdown**: Proper application lifecycle management
+- **Error Handling**: Comprehensive error recovery and reporting
+- **Circuit Breakers**: Fault tolerance patterns
 
 ---
 

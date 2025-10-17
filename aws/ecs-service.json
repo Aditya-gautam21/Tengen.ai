@@ -1,0 +1,47 @@
+{
+    "serviceName": "tengen-service",
+    "cluster": "tengen-cluster",
+    "taskDefinition": "tengen-task",
+    "desiredCount": 2,
+    "launchType": "FARGATE",
+    "platformVersion": "LATEST",
+    "networkConfiguration": {
+        "awsvpcConfiguration": {
+            "subnets": [
+                "subnet-12345678",
+                "subnet-87654321"
+            ],
+            "securityGroups": [
+                "sg-12345678"
+            ],
+            "assignPublicIp": "ENABLED"
+        }
+    },
+    "loadBalancers": [
+        {
+            "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:ACCOUNT_ID:targetgroup/tengen-tg/1234567890123456",
+            "containerName": "tengen-api",
+            "containerPort": 8080
+        }
+    ],
+    "healthCheckGracePeriodSeconds": 300,
+    "deploymentConfiguration": {
+        "maximumPercent": 200,
+        "minimumHealthyPercent": 50,
+        "deploymentCircuitBreaker": {
+            "enable": true,
+            "rollback": true
+        }
+    },
+    "enableExecuteCommand": true,
+    "tags": [
+        {
+            "key": "Environment",
+            "value": "production"
+        },
+        {
+            "key": "Application",
+            "value": "tengen-ai"
+        }
+    ]
+}
