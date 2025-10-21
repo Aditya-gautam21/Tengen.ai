@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tengen.ai Setup Script
+Tengen.ai Setup Script!
 Production-ready installation and configuration
 """
 
